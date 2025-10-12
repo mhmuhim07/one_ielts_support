@@ -6,11 +6,30 @@ import 'package:one_ielts_supports/presentation/screen/profile/widget/profile.da
 import 'package:one_ielts_supports/providers/inbox/inbox_provider.dart';
 import '../chat/chat_screen.dart';
 
-class InboxScreen extends ConsumerWidget {
+class InboxScreen extends ConsumerStatefulWidget {
   const InboxScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<InboxScreen> createState() => _InboxScreenState();
+}
+
+class _InboxScreenState extends ConsumerState<InboxScreen> {
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    _scrollController.addListener(() {
+      if (_scrollController.position.pixels ==
+          _scrollController.position.maxScrollExtent) {
+        ref.read(inboxProvider.notifier).nextPage();
+      }
+    });
+
+  }
+  @override
+  Widget build(BuildContext context) {
     final inboxState = ref.watch(inboxProvider);
     final scaffoldBackgroundColor = Theme.of(context).scaffoldBackgroundColor;
 
@@ -46,62 +65,49 @@ class InboxScreen extends ConsumerWidget {
           )
         ],
       ),
-      body: Column(
-        children: [
-          inboxState.when(
-            data: (inboxChats) => Expanded(
-              child: ListView.separated(
-                itemCount: inboxChats.length,
-                itemBuilder: (context, index) {
-                  final chat = inboxChats[index];
-                  return InkWell(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => ChatScreen(
-                            image: chat.profilePic,
-                            name: chat.name,
-                            isVip: chat.isVip,
-                            chatId: chat.id,
-                          ),
-                        ),
-                      );
-                    },
-                    splashColor: Colors.grey[200],
-                    highlightColor: Colors.grey[200],
-                    child: InboxListTile(
-                      image: chat.profilePic,
-                      name: chat.name,
-                      lastMessage: chat.lastMessage,
-                      timestamp: chat.timestamp,
-                      chatId: chat.id,
-                      isVip: chat.isVip,
+      body: inboxState.when(
+        data: (inboxChats) => RefreshIndicator(
+          onRefresh: () async {
+            await ref.read(inboxProvider.notifier).refresh();
+          },
+          child: ListView.separated(
+            controller: _scrollController,
+            itemCount: inboxChats.length,
+            itemBuilder: (context, index) {
+              final chat = inboxChats[index];
+              return InkWell(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ChatScreen(
+                        image: chat.profilePic,
+                        name: chat.name,
+                        isVip: chat.isVip,
+                        chatId: chat.id,
+                      ),
                     ),
                   );
                 },
-                separatorBuilder: (_, __) => const ChatDivider(),
-              ),
-            ),
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (error, stackTrace) => Center(
-              child: Text('Something went wrong: $error'),
-            ),
+                splashColor: Colors.grey[200],
+                highlightColor: Colors.grey[200],
+                child: InboxListTile(
+                  image: chat.profilePic,
+                  name: chat.name,
+                  lastMessage: chat.lastMessage,
+                  timestamp: chat.timestamp,
+                  chatId: chat.id,
+                  isVip: chat.isVip,
+                ),
+              );
+            },
+            separatorBuilder: (_, __) => const ChatDivider(),
           ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              if(ref.read(inboxProvider.notifier).getPreviousPage().isNotEmpty)IconButton(onPressed: () {
-                ref.read(inboxProvider.notifier).previousPage();
-              }, icon: Icon(Icons.arrow_upward)),
-              // const Spacer(),
-              if(ref.read(inboxProvider.notifier).getNextPage().isNotEmpty)IconButton(onPressed: () {
-                ref.read(inboxProvider.notifier).nextPage();
-              }, icon: Icon(Icons.arrow_downward)),
-            ],
-          ),
-          SizedBox(height: 20),
-        ],
+        ),
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, stackTrace) => Center(
+          child: Text('Something went wrong: $error'),
+        ),
       ),
     );
   }

@@ -9,34 +9,27 @@ final inboxProvider = AsyncNotifierProvider<InboxNotifier, List<Chat>>(
 
 class InboxNotifier extends AsyncNotifier<List<Chat>> {
   late final ApiService _apiService;
-  Timer? _timer;
-  String _currentInboxPage = "/api/support/studio/v1/chats/";
+  final _mainInboxPage = "/api/support/studio/v1/chats/?page_size=15";
   String? _nextInboxPage;
   String? _previousInboxPage;
   @override
   Future<List<Chat>> build() async {
     _apiService = ApiService();
 
-    final chats = await _fetchChats(_currentInboxPage);
+    final chats = await _fetchChats(_mainInboxPage,false);
     _nextInboxPage = _apiService.getNextInboxPage();
     _previousInboxPage = _apiService.getPreviousInboxPage();
-    _startPolling();
-
-    ref.onDispose(() {
-      _timer?.cancel();
-    });
-
     return chats;
   }
 
-  Future<List<Chat>> _fetchChats(String uri) async {
+  Future<List<Chat>> _fetchChats(String uri, bool keep) async {
     try {
       final data = await _apiService.getInboxChats(uri);
       _nextInboxPage = _apiService.getNextInboxPage();
       _previousInboxPage = _apiService.getPreviousInboxPage();
-      _currentInboxPage = uri;
       final chats = data.map((json) => Chat.fromJson(json)).toList();
-      state = AsyncValue.data(chats);
+      final currentChats = state.value ?? [];
+      state = keep ? AsyncValue.data([...currentChats, ...chats]) : AsyncValue.data(chats);
       return chats;
     } catch (e,st) {
       // print(e);
@@ -47,31 +40,11 @@ class InboxNotifier extends AsyncNotifier<List<Chat>> {
 
   Future<void> nextPage() async {
     if(_nextInboxPage != null){
-       _fetchChats(_nextInboxPage!);
+       _fetchChats(_nextInboxPage!,true);
     }
   }
-  Future<void> previousPage() async {
-    if(_previousInboxPage != null){
-      _fetchChats(_previousInboxPage!);
-    }
-  }
-  void _startPolling() {
-    _timer?.cancel();
-    _timer = Timer.periodic(const Duration(seconds: 10), (_) async {
-      try {
-        final data = await _fetchChats(_currentInboxPage);
-        final updatedChats = (data as List)
-            .map((json) => Chat.fromJson(json))
-            .toList();
-
-        final currentChats = state.value ?? [];
-        if (updatedChats.length != currentChats.length) {
-          state = AsyncValue.data(updatedChats);
-        }
-      } catch (_) {
-        // Ignore polling errors
-      }
-    });
+  Future<void> refresh() async{
+    _fetchChats(_mainInboxPage,false);
   }
   String getNextPage() => _nextInboxPage ?? '';
   String getPreviousPage() => _previousInboxPage ?? '';
