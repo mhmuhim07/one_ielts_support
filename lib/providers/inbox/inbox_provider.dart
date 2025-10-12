@@ -10,12 +10,16 @@ final inboxProvider = AsyncNotifierProvider<InboxNotifier, List<Chat>>(
 class InboxNotifier extends AsyncNotifier<List<Chat>> {
   late final ApiService _apiService;
   Timer? _timer;
-
+  String _currentInboxPage = "/api/support/studio/v1/chats/";
+  String? _nextInboxPage;
+  String? _previousInboxPage;
   @override
   Future<List<Chat>> build() async {
     _apiService = ApiService();
 
-    final chats = await _fetchChats();
+    final chats = await _fetchChats(_currentInboxPage);
+    _nextInboxPage = _apiService.getNextInboxPage();
+    _previousInboxPage = _apiService.getPreviousInboxPage();
     _startPolling();
 
     ref.onDispose(() {
@@ -25,24 +29,37 @@ class InboxNotifier extends AsyncNotifier<List<Chat>> {
     return chats;
   }
 
-  Future<List<Chat>> _fetchChats() async {
+  Future<List<Chat>> _fetchChats(String uri) async {
     try {
-      final data = await _apiService.getInboxChats();
+      final data = await _apiService.getInboxChats(uri);
+      _nextInboxPage = _apiService.getNextInboxPage();
+      _previousInboxPage = _apiService.getPreviousInboxPage();
+      _currentInboxPage = uri;
       final chats = data.map((json) => Chat.fromJson(json)).toList();
       state = AsyncValue.data(chats);
       return chats;
     } catch (e,st) {
-      print(e);
+      // print(e);
       state = AsyncValue.error(e,st);
       return [];
     }
   }
 
+  Future<void> nextPage() async {
+    if(_nextInboxPage != null){
+       _fetchChats(_nextInboxPage!);
+    }
+  }
+  Future<void> previousPage() async {
+    if(_previousInboxPage != null){
+      _fetchChats(_previousInboxPage!);
+    }
+  }
   void _startPolling() {
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 10), (_) async {
       try {
-        final data = await _apiService.getInboxChats();
+        final data = await _fetchChats(_currentInboxPage);
         final updatedChats = (data as List)
             .map((json) => Chat.fromJson(json))
             .toList();
@@ -56,4 +73,6 @@ class InboxNotifier extends AsyncNotifier<List<Chat>> {
       }
     });
   }
+  String getNextPage() => _nextInboxPage ?? '';
+  String getPreviousPage() => _previousInboxPage ?? '';
 }

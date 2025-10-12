@@ -46,43 +46,62 @@ class InboxScreen extends ConsumerWidget {
           )
         ],
       ),
-      body: inboxState.when(
-        data: (inboxChats) => ListView.separated(
-          itemCount: inboxChats.length,
-          itemBuilder: (context, index) {
-            final chat = inboxChats[index];
-            return InkWell(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => ChatScreen(
+      body: Column(
+        children: [
+          inboxState.when(
+            data: (inboxChats) => Expanded(
+              child: ListView.separated(
+                itemCount: inboxChats.length,
+                itemBuilder: (context, index) {
+                  final chat = inboxChats[index];
+                  return InkWell(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ChatScreen(
+                            image: chat.profilePic,
+                            name: chat.name,
+                            isVip: chat.isVip,
+                            chatId: chat.id,
+                          ),
+                        ),
+                      );
+                    },
+                    splashColor: Colors.grey[200],
+                    highlightColor: Colors.grey[200],
+                    child: InboxListTile(
                       image: chat.profilePic,
                       name: chat.name,
-                      isVip: chat.isVip,
+                      lastMessage: chat.lastMessage,
+                      timestamp: chat.timestamp,
                       chatId: chat.id,
+                      isVip: chat.isVip,
                     ),
-                  ),
-                );
-              },
-              splashColor: Colors.grey[200],
-              highlightColor: Colors.grey[200],
-              child: InboxListTile(
-                image: chat.profilePic,
-                name: chat.name,
-                lastMessage: chat.lastMessage,
-                timestamp: chat.timestamp,
-                chatId: chat.id,
-                isVip: chat.isVip,
+                  );
+                },
+                separatorBuilder: (_, __) => const ChatDivider(),
               ),
-            );
-          },
-          separatorBuilder: (_, __) => const ChatDivider(),
-        ),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stackTrace) => Center(
-          child: Text('Something went wrong: $error'),
-        ),
+            ),
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (error, stackTrace) => Center(
+              child: Text('Something went wrong: $error'),
+            ),
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if(ref.read(inboxProvider.notifier).getPreviousPage().isNotEmpty)IconButton(onPressed: () {
+                ref.read(inboxProvider.notifier).previousPage();
+              }, icon: Icon(Icons.arrow_upward)),
+              // const Spacer(),
+              if(ref.read(inboxProvider.notifier).getNextPage().isNotEmpty)IconButton(onPressed: () {
+                ref.read(inboxProvider.notifier).nextPage();
+              }, icon: Icon(Icons.arrow_downward)),
+            ],
+          ),
+          SizedBox(height: 20),
+        ],
       ),
     );
   }

@@ -75,21 +75,26 @@ class ApiService{
       return null;
     }
   }
-  Future<List<Map<String, dynamic>>> getInboxChats() async {
+  String? _nextInboxUri;
+  String? _previousInboxUri;
+  Future<List<Map<String, dynamic>>> getInboxChats(String uri) async {
     try {
       final tokens = await TokenStorage.getTokens();
       final accessToken = tokens['accessToken'];
       if (accessToken == null) return [];
 
       final response = await _api.client.get(
-        '/api/support/studio/v1/chats/?page_size=100',
+        uri,
         options: Options(
           headers: _myHeader(accessToken: accessToken),
         ),
       );
 
       if (response.statusCode == 200) {
+
         final results = response.data['results'] as List<dynamic>;
+        _nextInboxUri = response.data['next'];
+        _previousInboxUri = response.data['previous'];
         // print(results);
         return results.map((e) => e as Map<String, dynamic>).toList();
       }
@@ -98,6 +103,8 @@ class ApiService{
       return [];
     }
   }
+  String getNextInboxPage() => _nextInboxUri ?? '';
+  String getPreviousInboxPage() => _previousInboxUri ?? '';
   // Fetch chat messages by chatId
   Future<List<Map<String, dynamic>>> getChatMessages(int chatId) async {
     try {
@@ -151,9 +158,7 @@ class ApiService{
     }
   }
 
-
 }
-
 Map<String, dynamic> _myHeader({required String accessToken}) {
   return {
     'Accept': 'application/json',
