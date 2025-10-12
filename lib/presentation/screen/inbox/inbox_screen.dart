@@ -26,7 +26,11 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
         ref.read(inboxProvider.notifier).nextPage();
       }
     });
-
+  }
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
   @override
   Widget build(BuildContext context) {

@@ -107,15 +107,21 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               Expanded(
                 child: chatMessagesAsync.when(
                   data: (chatMessages){
-                    return ListView.builder(
-                      reverse: true,
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      itemCount: chatMessages.length,
-                      itemBuilder: (context, index) {
-                        final msg = chatMessages[index];
-                        final isUser = msg.sender == 'user';
-                        return ChatBuilder(msg: msg,isUser: isUser,);
+                    return RefreshIndicator(
+                      onRefresh: () async {
+                        // Call your function to fetch previous messages
+                        await ref.read(chatMessagesProvider(widget.chatId).notifier).previousPage(widget.chatId);
                       },
+                      child :ListView.builder(
+                        reverse: true,
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        itemCount: chatMessages.length,
+                        itemBuilder: (context, index) {
+                          final msg = chatMessages[index];
+                          final isUser = msg.sender == 'user';
+                          return ChatBuilder(msg: msg,isUser: isUser,);
+                        },
+                      ),
                     );
                   },
                   loading: () => const Center(child: CircularProgressIndicator()),

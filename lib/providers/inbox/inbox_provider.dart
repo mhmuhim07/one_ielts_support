@@ -11,14 +11,12 @@ class InboxNotifier extends AsyncNotifier<List<Chat>> {
   late final ApiService _apiService;
   final _mainInboxPage = "/api/support/studio/v1/chats/?page_size=15";
   String? _nextInboxPage;
-  String? _previousInboxPage;
   @override
   Future<List<Chat>> build() async {
     _apiService = ApiService();
 
     final chats = await _fetchChats(_mainInboxPage,false);
     _nextInboxPage = _apiService.getNextInboxPage();
-    _previousInboxPage = _apiService.getPreviousInboxPage();
     return chats;
   }
 
@@ -26,7 +24,6 @@ class InboxNotifier extends AsyncNotifier<List<Chat>> {
     try {
       final data = await _apiService.getInboxChats(uri);
       _nextInboxPage = _apiService.getNextInboxPage();
-      _previousInboxPage = _apiService.getPreviousInboxPage();
       final chats = data.map((json) => Chat.fromJson(json)).toList();
       final currentChats = state.value ?? [];
       state = keep ? AsyncValue.data([...currentChats, ...chats]) : AsyncValue.data(chats);
@@ -46,6 +43,4 @@ class InboxNotifier extends AsyncNotifier<List<Chat>> {
   Future<void> refresh() async{
     _fetchChats(_mainInboxPage,false);
   }
-  String getNextPage() => _nextInboxPage ?? '';
-  String getPreviousPage() => _previousInboxPage ?? '';
 }

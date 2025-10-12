@@ -76,7 +76,6 @@ class ApiService{
     }
   }
   String? _nextInboxUri;
-  String? _previousInboxUri;
   Future<List<Map<String, dynamic>>> getInboxChats(String uri) async {
     try {
       final tokens = await TokenStorage.getTokens();
@@ -94,7 +93,6 @@ class ApiService{
 
         final results = response.data['results'] as List<dynamic>;
         _nextInboxUri = response.data['next'];
-        _previousInboxUri = response.data['previous'];
         // print(results);
         return results.map((e) => e as Map<String, dynamic>).toList();
       }
@@ -104,20 +102,42 @@ class ApiService{
     }
   }
   String getNextInboxPage() => _nextInboxUri ?? '';
-  String getPreviousInboxPage() => _previousInboxUri ?? '';
   // Fetch chat messages by chatId
-  Future<List<Map<String, dynamic>>> getChatMessages(int chatId) async {
+  Future<int> getUnreadCount(int chatId) async {
+    try {
+      final tokens = await TokenStorage.getTokens();
+      final accessToken = tokens['accessToken'];
+      if (accessToken == null) return 0;
+      final response = await _api.client.get(
+        '/api/support/studio/v1/chats/$chatId/',
+        options: Options(headers: _myHeader(accessToken: accessToken)),
+      );
+      if (response.statusCode == 200) {
+        return response.data['unread_count'];
+      } else {
+        return 0;
+      }
+    } on DioException catch (_) {
+      return 0;
+    }
+  }
+
+  String? _nextChatMessagesUri;
+  String getNextChatMessagesPage() => _nextChatMessagesUri ?? '';
+  Future<List<Map<String, dynamic>>> getChatMessages(String uri) async {
     try {
       final tokens =  await TokenStorage.getTokens();
       final accessToken = tokens['accessToken'];
       if(accessToken == null) return [];
       final response = await _api.client.get(
-        '/api/support/studio/v1/chats/$chatId/messages/?page_size=100',
+        // '/api/support/studio/v1/chats/$chatId/messages/?page_size=100',
+        uri,
         options: Options(
           headers: _myHeader(accessToken: accessToken),
         ),
       );
       if(response.statusCode == 200){
+        _nextChatMessagesUri = response.data['next'];
         final results = response.data['results'] as List<dynamic>;
         return results.map((e) => e as Map<String, dynamic>).toList();
       }
@@ -126,6 +146,7 @@ class ApiService{
       return [];
     }
   }
+
   Future<Map<String, dynamic>> postChatMessage(
       int chatId, {
         String? content,
@@ -152,12 +173,11 @@ class ApiService{
       } else {
         return {};
       }
-    } on DioException catch (e) {
-      print('Dio error: ${e.message}');
+    } on DioException catch (_) {
+      // print('Dio error: ${e.message}');
       return {};
     }
   }
-
 }
 Map<String, dynamic> _myHeader({required String accessToken}) {
   return {
