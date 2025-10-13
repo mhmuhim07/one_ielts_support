@@ -15,7 +15,7 @@ class InboxScreen extends ConsumerStatefulWidget {
 
 class _InboxScreenState extends ConsumerState<InboxScreen> {
   final ScrollController _scrollController = ScrollController();
-
+  bool isLoading = false;
   @override
   void initState() {
     // TODO: implement initState
@@ -23,7 +23,14 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
     _scrollController.addListener(() {
       if (_scrollController.position.pixels ==
           _scrollController.position.maxScrollExtent) {
+        setState(() {
+          isLoading = true;
+        });
+        // await Future.delayed(const Duration(seconds: 1));
         ref.read(inboxProvider.notifier).nextPage();
+        setState(() {
+          isLoading = false;
+        });
       }
     });
   }
@@ -36,7 +43,6 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
   Widget build(BuildContext context) {
     final inboxState = ref.watch(inboxProvider);
     final scaffoldBackgroundColor = Theme.of(context).scaffoldBackgroundColor;
-
     return Scaffold(
       appBar: AppBar(
         backgroundColor: scaffoldBackgroundColor,
@@ -70,14 +76,22 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
         ],
       ),
       body: inboxState.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
         data: (inboxChats) => RefreshIndicator(
           onRefresh: () async {
             await ref.read(inboxProvider.notifier).refresh();
           },
           child: ListView.separated(
             controller: _scrollController,
-            itemCount: inboxChats.length,
+            itemCount: inboxChats.length + (isLoading ? 1 : 0),
             itemBuilder: (context, index) {
+              if (isLoading && index == inboxChats.length) {
+                return const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16),
+                  child: Center(child: CircularProgressIndicator()),
+                );
+              }
+
               final chat = inboxChats[index];
               return InkWell(
                 onTap: () {
@@ -108,11 +122,12 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
             separatorBuilder: (_, __) => const ChatDivider(),
           ),
         ),
-        loading: () => const Center(child: CircularProgressIndicator()),
+
         error: (error, stackTrace) => Center(
           child: Text('Something went wrong: $error'),
         ),
       ),
+
     );
   }
 }

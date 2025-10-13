@@ -17,11 +17,6 @@ class ChatMessagesNotifier extends _$ChatMessagesNotifier {
     _apiService = ApiService();
     final uri = await getUri();
     final messages = await fetchMessages(uri);
-    // _startPolling(chatId);
-    //
-    // ref.onDispose(() {
-    //   _timer?.cancel();
-    // });
     return messages;
   }
   Future<List<Message>> fetchMessages(String uri) async {
@@ -30,7 +25,7 @@ class ChatMessagesNotifier extends _$ChatMessagesNotifier {
   }
   Future<String> getUri() async {
     final unread = await _apiService.getUnreadCount(chatId);
-    int x = unread > _limit ? _limit : unread;
+    int x = unread > _limit ? unread : _limit;
     final uri = '/api/support/studio/v1/chats/$chatId/messages/?page_size=$x';
     return uri;
   }
@@ -49,7 +44,6 @@ class ChatMessagesNotifier extends _$ChatMessagesNotifier {
     try {
       final currentMessages = state.asData?.value ?? [];
 
-      // Prepare files for FormData
       List<MultipartFile> files = [];
       if (images != null && images.isNotEmpty) {
         for (var file in images) {
@@ -63,32 +57,19 @@ class ChatMessagesNotifier extends _$ChatMessagesNotifier {
 
       // print('Prepared files: $files');
 
-      // Send request using FormData
       final response = await _apiService.postChatMessage(
         chatId,
         content: content,
-        files: files, // ✅ pass prepared multipart list
+        files: files,
       );
 
-      // Handle API response
       final newMessage = Message.fromJson(response);
       // print('Response: $response');
 
-      // Update state immediately
+
       state = AsyncValue.data([newMessage, ...currentMessages]);
     } catch (e, st) {
       // print('Error sending message: $e');
     }
   }
-
-  // void _startPolling(int chatId) {
-  //   _timer?.cancel();
-  //   _timer = Timer.periodic(const Duration(seconds: 5), (_) async {
-  //     try {
-  //       final updatedMessages = await fetchMessages(chatId);
-  //       final currentMessages = state.asData?.value ?? [];
-  //       if(updatedMessages != currentMessages) state = AsyncValue.data(updatedMessages);
-  //     } catch (_) {}
-  //   });
-  // }
 }
