@@ -34,11 +34,13 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
       }
     });
   }
+
   @override
   void dispose() {
     _scrollController.dispose();
     super.dispose();
   }
+
   @override
   Widget build(BuildContext context) {
     final inboxState = ref.watch(inboxProvider);
@@ -59,10 +61,7 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
             const SizedBox(width: 10),
             const Text(
               'Support',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 25,
-              ),
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 25),
             ),
           ],
         ),
@@ -72,7 +71,7 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
             onPressed: () {
               openProfileSlide(context);
             },
-          )
+          ),
         ],
       ),
       body: inboxState.when(
@@ -105,7 +104,9 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
                         chatId: chat.id,
                       ),
                     ),
-                  );
+                  ).then((_) {
+                    ref.read(inboxProvider.notifier).refresh();
+                  });
                 },
                 splashColor: Colors.grey[200],
                 highlightColor: Colors.grey[200],
@@ -123,11 +124,9 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
           ),
         ),
 
-        error: (error, stackTrace) => Center(
-          child: Text('Something went wrong: $error'),
-        ),
+        error: (error, stackTrace) =>
+            Center(child: Text('Something went wrong: $error')),
       ),
-
     );
   }
 }

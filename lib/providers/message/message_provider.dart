@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math' as Math;
 import 'package:dio/dio.dart';
 import 'package:one_ielts_supports/data/service/api_service.dart';
 import 'package:one_ielts_supports/model/message.dart';
@@ -11,7 +12,9 @@ part 'message_provider.g.dart';
 class ChatMessagesNotifier extends _$ChatMessagesNotifier {
   late final ApiService _apiService;
   // Timer? _timer;
-  final _limit = 10;
+  final _limit = 15;
+  int unseen = 0;
+
   @override
   Future<List<Message>> build(int chatId) async {
     _apiService = ApiService();
@@ -25,25 +28,61 @@ class ChatMessagesNotifier extends _$ChatMessagesNotifier {
   }
   Future<String> getUri() async {
     final unread = await _apiService.getUnreadCount(chatId);
-    int x = unread > _limit ? unread : _limit;
+    int x = Math.max(Math.max(unread, _limit),unseen);
     final uri = '/api/support/studio/v1/chats/$chatId/messages/?page_size=$x';
     return uri;
   }
+  int getUnseenCount() => unseen;
 
   Future<void> previousPage(int chatId) async {
+
     try {
+      final unread = await _apiService.getUnreadCount(chatId);
+      // print(unread);
+      unseen += unread;
+      if(unread > 0){
+        String uri = _apiService.getNextChatMessagesPage();
+
+        if(uri != ''){
+          // print('uri : $uri');
+          Uri parsed = Uri.parse(uri);
+          Map<String, String> params = Map.from(parsed.queryParameters);
+          params['page_size'] = '$unread'; // just replace the value
+          String updatedUrl = parsed.replace(queryParameters: params).toString();
+          // print(updatedUrl);
+          await fetchMessages(updatedUrl);
+        }
+      }
       final uri = _apiService.getNextChatMessagesPage();
-      final messages = await fetchMessages(uri);
-      final currentMessages = state.asData?.value ?? [];
-      state = AsyncValue.data([...currentMessages,...messages]);
+      if(uri != ''){
+        Uri parsed = Uri.parse(uri);
+        Map<String, String> params = Map.from(parsed.queryParameters);
+        params['page_size'] = '15'; // just replace the value
+        String updatedUrl = parsed.replace(queryParameters: params).toString();
+        final messages = await fetchMessages(updatedUrl);
+        final currentMessages = state.value ?? [];
+        state = AsyncValue.data([...currentMessages, ...messages]);
+      }else {
+        state = AsyncValue.data(state.value ?? []);
+      }
     } catch (e) {
-      state = AsyncValue.data(state.asData?.value ?? []);
+      state = AsyncValue.data(state.value ?? []);
     }
   }
+
+  Future<void> newMessage(int chatId) async {
+    try {
+      final uri = await getUri();
+      final messages = await fetchMessages(uri);
+      state = AsyncValue.data(messages);
+      unseen = 0;
+    } catch (e) {
+      state = AsyncValue.data(state.value ?? []);
+    }
+  }
+
   void sendMessage(int chatId, {String? content, List<File>? images}) async {
     try {
-      final currentMessages = state.asData?.value ?? [];
-
       List<MultipartFile> files = [];
       if (images != null && images.isNotEmpty) {
         for (var file in images) {
@@ -54,20 +93,20 @@ class ChatMessagesNotifier extends _$ChatMessagesNotifier {
           files.add(multipart);
         }
       }
-
       // print('Prepared files: $files');
-
       final response = await _apiService.postChatMessage(
         chatId,
         content: content,
         files: files,
       );
-
-      final newMessage = Message.fromJson(response);
       // print('Response: $response');
-
-
-      state = AsyncValue.data([newMessage, ...currentMessages]);
+      try {
+        final uri = await getUri();
+        final messages = await fetchMessages(uri);
+        state = AsyncValue.data(messages);
+      } catch (e) {
+        state = AsyncValue.data(state.value ?? []);
+      }
     } catch (e, st) {
       // print('Error sending message: $e');
     }
