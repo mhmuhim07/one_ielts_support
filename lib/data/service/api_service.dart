@@ -1,9 +1,8 @@
-
 import 'package:dio/dio.dart';
 import 'package:one_ielts_supports/data/api_client.dart';
 import 'package:one_ielts_supports/data/service/local_storage.dart';
 
-class ApiService{
+class ApiService {
   final ApiClient _api = ApiClient();
   Future<bool> login(String email, String password) async {
     try {
@@ -34,17 +33,15 @@ class ApiService{
   Future<void> logout() async {
     final tokens = await TokenStorage.getTokens();
     final accessToken = tokens['accessToken'];
-    if(accessToken != null){
+    if (accessToken != null) {
       try {
         await _api.client.post(
           '/api/identity/v1/logout/',
-          options: Options(
-            headers: _myHeader(accessToken: accessToken),
-          ),
+          options: Options(headers: _myHeader(accessToken: accessToken)),
         );
-      } catch(_){
+      } catch (_) {
         // print('Logout API error: $e');
-      } finally{
+      } finally {
         await TokenStorage.clearTokens();
         await UserInfoStorage.clearUserInfo();
         // print("Logout Success");
@@ -57,17 +54,15 @@ class ApiService{
     try {
       final tokens = await TokenStorage.getTokens();
       final accessToken = tokens['accessToken'];
-      if(accessToken == null) return null;
+      if (accessToken == null) return null;
 
       final response = await _api.client.get(
         '/api/identity/v1/me/',
-        options: Options(
-          headers: _myHeader(accessToken: accessToken)
-        )
+        options: Options(headers: _myHeader(accessToken: accessToken)),
       );
       // print('Response Code: ${response.statusCode}');
       // print('Response Data: ${response.data}');
-      if(response.statusCode == 401){
+      if (response.statusCode == 401) {
         return null;
       }
       return response.data;
@@ -75,6 +70,7 @@ class ApiService{
       return null;
     }
   }
+
   String? _nextInboxUri;
   Future<List<Map<String, dynamic>>> getInboxChats(String uri) async {
     try {
@@ -84,13 +80,10 @@ class ApiService{
 
       final response = await _api.client.get(
         uri,
-        options: Options(
-          headers: _myHeader(accessToken: accessToken),
-        ),
+        options: Options(headers: _myHeader(accessToken: accessToken)),
       );
 
       if (response.statusCode == 200) {
-
         final results = response.data['results'] as List<dynamic>;
         _nextInboxUri = response.data['next'];
         // print(results);
@@ -101,7 +94,8 @@ class ApiService{
       return [];
     }
   }
-  String getNextInboxPage() => _nextInboxUri ?? '';
+
+  String? getNextInboxPage() => _nextInboxUri;
   // Fetch chat messages by chatId
   Future<int> getUnreadCount(int chatId) async {
     try {
@@ -126,17 +120,15 @@ class ApiService{
   String getNextChatMessagesPage() => _nextChatMessagesUri ?? '';
   Future<List<Map<String, dynamic>>> getChatMessages(String uri) async {
     try {
-      final tokens =  await TokenStorage.getTokens();
+      final tokens = await TokenStorage.getTokens();
       final accessToken = tokens['accessToken'];
-      if(accessToken == null) return [];
+      if (accessToken == null) return [];
       final response = await _api.client.get(
         // '/api/support/studio/v1/chats/$chatId/messages/?page_size=100',
         uri,
-        options: Options(
-          headers: _myHeader(accessToken: accessToken),
-        ),
+        options: Options(headers: _myHeader(accessToken: accessToken)),
       );
-      if(response.statusCode == 200){
+      if (response.statusCode == 200) {
         _nextChatMessagesUri = response.data['next'];
         final results = response.data['results'] as List<dynamic>;
         return results.map((e) => e as Map<String, dynamic>).toList();
@@ -148,10 +140,10 @@ class ApiService{
   }
 
   Future<Map<String, dynamic>> postChatMessage(
-      int chatId, {
-        String? content,
-        List<MultipartFile>? files,
-      }) async {
+    int chatId, {
+    String? content,
+    List<MultipartFile>? files,
+  }) async {
     try {
       final tokens = await TokenStorage.getTokens();
       final accessToken = tokens['accessToken'];
@@ -179,6 +171,7 @@ class ApiService{
     }
   }
 }
+
 Map<String, dynamic> _myHeader({required String accessToken}) {
   return {
     'Accept': 'application/json',
@@ -192,5 +185,3 @@ Map<String, dynamic> _myHeader({required String accessToken}) {
     'Authorization': 'Bearer $accessToken',
   };
 }
-
-

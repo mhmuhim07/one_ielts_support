@@ -1,5 +1,4 @@
 import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
@@ -28,18 +27,25 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   final ScrollController _scrollController = ScrollController();
   final List<File> _selectedImages = [];
   bool _isLoading = false;
+
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
-    _scrollController.addListener(() {
+    _scrollController.addListener(() async {
+      final notifier = ref.read(chatMessagesProvider(widget.chatId).notifier);
+
+      final atBottom =
+          _scrollController.position.pixels <=
+          _scrollController.position.minScrollExtent + 50;
+      notifier.setAtBottom(atBottom);
+
       if (_scrollController.position.pixels ==
           _scrollController.position.maxScrollExtent) {
-        setState(() => _isLoading = true);
-        ref
-            .read(chatMessagesProvider(widget.chatId).notifier)
-            .previousPage(widget.chatId);
-        setState(() => _isLoading = false);
+        if (!_isLoading) {
+          setState(() => _isLoading = true);
+          await notifier.previousPage(widget.chatId);
+          setState(() => _isLoading = false);
+        }
       }
     });
   }
@@ -47,6 +53,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   @override
   void dispose() {
     _textController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -64,30 +71,44 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final message = _textController.text.trim();
     final image = List<File>.from(_selectedImages);
 
-    ref
-        .read(chatMessagesProvider(widget.chatId).notifier)
-        .sendMessage(widget.chatId, content: message, images: image);
+    ref.read(chatMessagesProvider(widget.chatId).notifier)
+      ..sendMessage(widget.chatId, content: message, images: image)
+      ..setAtBottom(true);
+
     _textController.clear();
     setState(() {
       _selectedImages.clear();
     });
+    _scrollToBottom();
   }
 
-  final ImagePicker _picker = ImagePicker();
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _scrollController.animateTo(
-        _scrollController.position.minScrollExtent,
-        duration: const Duration(milliseconds: 400),
-        curve: Curves.easeOut,
-      );
+      if (!_scrollController.hasClients) return;
+      _scrollController
+          .animateTo(
+            _scrollController.position.minScrollExtent,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+          )
+          .then((_) {
+            ref
+                .read(chatMessagesProvider(widget.chatId).notifier)
+                .setAtBottom(true);
+          });
     });
   }
 
   @override
   Widget build(BuildContext context) {
     final chatMessagesAsync = ref.watch(chatMessagesProvider(widget.chatId));
+    final chatNotifier = ref.watch(
+      chatMessagesProvider(widget.chatId).notifier,
+    );
+    final unseenCount = chatNotifier.unseen;
+    final isAtBottom = chatNotifier.isAtBottom;
     final scaffoldBackgroundColor = Theme.of(context).scaffoldBackgroundColor;
+
     return Container(
       decoration: BoxDecoration(color: scaffoldBackgroundColor),
       child: SafeArea(
@@ -106,10 +127,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     shape: BoxShape.circle,
                     gradient: widget.isVip
                         ? const LinearGradient(
-                            colors: [
-                              Color(0xFFFFD700), // Gold
-                              Color(0xFFFFA500),
-                            ],
+                            colors: [Color(0xFFFFD700), Color(0xFFFFA500)],
                           )
                         : null,
                   ),
@@ -133,13 +151,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         : null,
                   ),
                 ),
-                SizedBox(width: 12),
+                const SizedBox(width: 12),
                 Flexible(
                   child: Text(
                     widget.name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                    style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),
               ],
@@ -156,11 +174,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       data: (chatMessages) {
                         return ListView.builder(
                           controller: _scrollController,
-                          reverse: true, // newest messages at the bottom
+                          reverse: true,
                           padding: const EdgeInsets.symmetric(horizontal: 12),
                           itemCount: chatMessages.length + (_isLoading ? 1 : 0),
                           itemBuilder: (context, index) {
-                            // Show loading at the top when fetching previous messages
                             if (_isLoading && index == chatMessages.length) {
                               return const Padding(
                                 padding: EdgeInsets.symmetric(vertical: 16),
@@ -172,7 +189,19 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
                             final msg = chatMessages[index];
                             final isUser = msg.sender == 'user';
-                            return ChatBuilder(msg: msg, isUser: isUser);
+                            bool keepProfile = false;
+                            if (index < chatMessages.length - 1) {
+                              final prevMsg = chatMessages[index + 1];
+                              keepProfile =
+                                  prevMsg.sender != msg.sender &&
+                                  msg.sender != 'user';
+                            }
+                            return ChatBuilder(
+                              msg: msg,
+                              isUser: isUser,
+                              name: widget.name,
+                              keepProfile: true,
+                            );
                           },
                         );
                       },
@@ -242,11 +271,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         Expanded(
                           child: TextField(
                             controller: _textController,
-                            keyboardType: TextInputType
-                                .multiline, // allows multiline input
-                            textInputAction: TextInputAction
-                                .newline, // pressing Enter adds new line
-                            minLines: 1, // starts small
+                            keyboardType: TextInputType.multiline,
+                            textInputAction: TextInputAction.newline,
+                            minLines: 1,
                             maxLines: 5,
                             decoration: InputDecoration(
                               hintText: 'Type a message',
@@ -280,22 +307,71 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   ),
                 ],
               ),
-              if (ref
-                      .read(chatMessagesProvider(widget.chatId).notifier)
-                      .getUnseenCount() >
-                  0)
+              // Scroll-down FAB
+              if (unseenCount > 0 || !isAtBottom)
                 Positioned(
                   bottom: 80,
                   right: 16,
-                  child: FloatingActionButton(
-                    backgroundColor: Colors.blue,
-                    onPressed: () {
-                      ref
-                          .read(chatMessagesProvider(widget.chatId).notifier)
-                          .newMessage(widget.chatId);
+                  child: GestureDetector(
+                    onTap: () async {
+                      if (unseenCount > 0) {
+                        await chatNotifier.newMessage(widget.chatId);
+                      }
+                      chatNotifier.clearUnseen();
                       _scrollToBottom();
                     },
-                    child: const Icon(Icons.arrow_downward),
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        // Main circular button
+                        Container(
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.transparent,
+                            boxShadow: const [
+                              // BoxShadow(
+                              //   color: Colors.black26,
+                              //   blurRadius: 6,
+                              //   offset: Offset(0, 3),
+                              // ),
+                            ],
+                          ),
+                          padding: const EdgeInsets.all(14),
+                          child: const Icon(
+                            Icons.arrow_downward_rounded,
+                            color: Colors.pink,
+                            size: 26,
+                          ),
+                        ),
+                        // Unread badge
+                        if (unseenCount > 0)
+                          Positioned(
+                            right: -2,
+                            top: -2,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: const BoxDecoration(
+                                color: Colors.pink,
+                                shape: BoxShape.circle,
+                              ),
+                              constraints: const BoxConstraints(
+                                minWidth: 18,
+                                minHeight: 18,
+                              ),
+                              child: Center(
+                                child: Text(
+                                  unseenCount > 9 ? '9+' : '$unseenCount',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
                 ),
             ],

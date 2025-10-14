@@ -6,8 +6,15 @@ import 'package:one_ielts_supports/utils/helper.dart';
 class ChatBuilder extends StatelessWidget {
   final Message msg;
   final bool isUser;
-
-  const ChatBuilder({super.key, required this.msg, required this.isUser});
+  final String? name;
+  final bool keepProfile;
+  const ChatBuilder({
+    super.key,
+    required this.msg,
+    required this.isUser,
+    required this.keepProfile,
+    this.name,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -16,24 +23,27 @@ class ChatBuilder extends StatelessWidget {
     Widget messageContent() {
       switch (msg.type) {
         case MessageType.text:
-          return _showHtml(msg.message,isUser);
+          return _showHtml(msg.message, isUser);
 
         case MessageType.image:
           if (msg.imageUrls == null || msg.imageUrls!.isEmpty) {
-            return const Text("Image not available",
-                style: TextStyle(color: Colors.red));
+            return const Text(
+              "Image not available",
+              style: TextStyle(color: Colors.red),
+            );
           }
           return _buildImages(msg.imageUrls!, context);
 
         case MessageType.mixed:
           return Column(
-            crossAxisAlignment:
-            isUser ? CrossAxisAlignment.start : CrossAxisAlignment.end,
+            crossAxisAlignment: isUser
+                ? CrossAxisAlignment.start
+                : CrossAxisAlignment.end,
             children: [
               if (msg.message != null && msg.message!.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 4),
-                  child: _showHtml(msg.message,isUser),
+                  child: _showHtml(msg.message, isUser),
                 ),
               if (msg.imageUrls != null && msg.imageUrls!.isNotEmpty)
                 _buildImages(msg.imageUrls!, context),
@@ -41,55 +51,75 @@ class ChatBuilder extends StatelessWidget {
           );
 
         default:
-          return _showHtml(msg.message,isUser);
+          return _showHtml(msg.message, isUser);
       }
     }
 
     return Align(
       alignment: isUser ? Alignment.centerLeft : Alignment.centerRight,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment:
-        isUser ? CrossAxisAlignment.start : CrossAxisAlignment.end,
+      child: Row(
+        mainAxisAlignment: isUser
+            ? MainAxisAlignment.start
+            : MainAxisAlignment.end,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Chat bubble
-          Container(
-            margin: const EdgeInsets.symmetric(vertical: 2, horizontal: 8),
-            padding: msg.type == MessageType.text
-                ? const EdgeInsets.symmetric(vertical: 8, horizontal: 12)
-                : const EdgeInsets.all(4),
-            constraints: BoxConstraints(
-                maxWidth: MediaQuery.of(context).size.width * 0.7),
-            decoration: BoxDecoration(
-              color: isUser ? Colors.pink[300] : Colors.grey[300],
-              borderRadius: BorderRadius.only(
-                topLeft: const Radius.circular(12),
-                topRight: const Radius.circular(12),
-                bottomLeft: isUser ? Radius.zero : const Radius.circular(12),
-                bottomRight: isUser ? const Radius.circular(12) : Radius.zero,
-              ),
-            ),
-            child: messageContent(),
-          ),
-
-          // Timestamp aligned with bubble side
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment:
-              isUser ? MainAxisAlignment.start : MainAxisAlignment.end,
-              children: [
-                Text(
-                  helper.formateTimeStamp(msg.timestamp),
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: Colors.grey[600],
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: isUser
+                ? CrossAxisAlignment.start
+                : CrossAxisAlignment.end,
+            children: [
+              // Chat bubble
+              Container(
+                margin: const EdgeInsets.symmetric(vertical: 2, horizontal: 8),
+                padding: msg.type == MessageType.text
+                    ? const EdgeInsets.symmetric(vertical: 8, horizontal: 12)
+                    : const EdgeInsets.all(4),
+                constraints: BoxConstraints(
+                  maxWidth: MediaQuery.of(context).size.width * 0.7,
+                ),
+                decoration: BoxDecoration(
+                  color: isUser ? Colors.pink[300] : Colors.grey[300],
+                  borderRadius: BorderRadius.only(
+                    topLeft: const Radius.circular(12),
+                    topRight: const Radius.circular(12),
+                    bottomLeft: isUser
+                        ? Radius.zero
+                        : const Radius.circular(12),
+                    bottomRight: isUser
+                        ? const Radius.circular(12)
+                        : Radius.zero,
                   ),
                 ),
-              ],
-            ),
+                child: messageContent(),
+              ),
+
+              // Timestamp aligned with bubble side
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 2,
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: isUser
+                      ? MainAxisAlignment.start
+                      : MainAxisAlignment.end,
+                  children: [
+                    Text(
+                      helper.formateTimeStamp(msg.timestamp),
+                      style: TextStyle(fontSize: 10, color: Colors.grey[600]),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
+          if (!isUser && keepProfile)
+            Padding(
+              padding: const EdgeInsets.all(0),
+              child: _profileImg(msg.senderImgUrl, name),
+            ),
         ],
       ),
     );
@@ -124,10 +154,7 @@ class ChatBuilder extends StatelessWidget {
           onTap: () => _showImagePreview(context, urls[index]),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(12),
-            child: Image.network(
-              urls[index],
-              fit: BoxFit.cover,
-            ),
+            child: Image.network(urls[index], fit: BoxFit.cover),
           ),
         );
       },
@@ -188,3 +215,16 @@ Widget _showHtml(String? message, bool isUser) {
   );
 }
 
+Widget _profileImg(String imageUrl, String? name) {
+  return CircleAvatar(
+    radius: 14,
+    backgroundImage: imageUrl != '' ? NetworkImage(imageUrl) : null,
+    backgroundColor: Colors.pink[300],
+    child: imageUrl == ''
+        ? Text(
+            name!.isNotEmpty ? name[0].toUpperCase() : '?',
+            style: TextStyle(color: Colors.white, fontSize: 16),
+          )
+        : null,
+  );
+}

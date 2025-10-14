@@ -1,4 +1,5 @@
 enum MessageStatus { sent, delivered, seen, failed }
+
 enum MessageType { text, image, mixed, system, typing }
 
 class Message {
@@ -9,6 +10,7 @@ class Message {
   final MessageStatus status;
   final MessageType type;
   final List<String>? imageUrls;
+  final String senderImgUrl;
 
   Message({
     required this.id,
@@ -18,6 +20,7 @@ class Message {
     this.status = MessageStatus.sent,
     this.type = MessageType.text,
     this.imageUrls,
+    required this.senderImgUrl,
   });
 
   factory Message.fromJson(Map<String, dynamic> json) {
@@ -41,7 +44,7 @@ class Message {
     } else {
       type = MessageType.text;
     }
-
+    final sender = (json['sender'] as Map<String, dynamic>?) ?? {};
     return Message(
       id: json['id'] ?? 0,
       sender: json['sender_type'] ?? 'Unknown',
@@ -49,6 +52,7 @@ class Message {
       timestamp: json['created_at'] ?? '',
       type: type,
       imageUrls: imageUrls,
+      senderImgUrl: sender['avatar'],
     );
   }
 

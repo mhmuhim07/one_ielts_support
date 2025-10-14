@@ -16,18 +16,22 @@ class InboxScreen extends ConsumerStatefulWidget {
 class _InboxScreenState extends ConsumerState<InboxScreen> {
   final ScrollController _scrollController = ScrollController();
   bool isLoading = false;
+
   @override
   void initState() {
     // TODO: implement initState
     super.initState();
-    _scrollController.addListener(() {
-      if (_scrollController.position.pixels ==
-          _scrollController.position.maxScrollExtent) {
+    _scrollController.addListener(() async {
+      if (_scrollController.position.pixels >=
+          _scrollController.position.maxScrollExtent - 200) {
+        if (isLoading) return;
         setState(() {
           isLoading = true;
         });
-        // await Future.delayed(const Duration(seconds: 1));
-        ref.read(inboxProvider.notifier).nextPage();
+        // final stopwatch = Stopwatch()..start();
+        await ref.read(inboxProvider.notifier).nextPage();
+        // stopwatch.stop();
+        // debugPrint('nextPage() took: ${stopwatch.elapsedMilliseconds} ms');
         setState(() {
           isLoading = false;
         });

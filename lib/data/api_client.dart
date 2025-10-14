@@ -1,9 +1,11 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
 import 'package:one_ielts_supports/data/service/local_storage.dart';
+import 'package:one_ielts_supports/navigation_service.dart';
 
-class ApiClient{
+class ApiClient {
   late final Dio _dio;
-  ApiClient(){
+  ApiClient() {
     _dio = Dio(
       BaseOptions(
         baseUrl: 'https://staging.proxisprep.com',
@@ -23,8 +25,9 @@ class ApiClient{
       InterceptorsWrapper(
         onRequest: (options, handler) async {
           final tokens = await TokenStorage.getTokens();
-          if(tokens['accessToken'] != null){
-            options.headers['Authorization'] = 'Bearer ${tokens['accessToken']}';
+          if (tokens['accessToken'] != null) {
+            options.headers['Authorization'] =
+                'Bearer ${tokens['accessToken']}';
           }
           handler.next(options);
         },
@@ -33,7 +36,8 @@ class ApiClient{
             final refreshed = await _refreshToken();
             if (refreshed) {
               final tokens = await TokenStorage.getTokens();
-              e.requestOptions.headers['Authorization'] = 'Bearer ${tokens['accessToken']}';
+              e.requestOptions.headers['Authorization'] =
+                  'Bearer ${tokens['accessToken']}';
               final cloneRequest = await _dio.fetch(e.requestOptions);
               return handler.resolve(cloneRequest);
             } else {
@@ -41,17 +45,17 @@ class ApiClient{
             }
           }
           handler.next(e);
-        }
+        },
       ),
     );
   }
   Dio get client => _dio;
-  Future <bool>_refreshToken() async {
+  Future<bool> _refreshToken() async {
     final tokens = await TokenStorage.getTokens();
     final refreshToken = tokens['refreshToken'];
-    if(refreshToken == null)return false;
+    if (refreshToken == null) return false;
 
-    try{
+    try {
       final response = await _dio.post(
         '/api/identity/v1/token-refresh/',
         data: {'refresh_token': refreshToken},
@@ -63,6 +67,10 @@ class ApiClient{
       return true;
     } catch (e) {
       await TokenStorage.clearTokens();
+      navigatorKey.currentState?.pushNamedAndRemoveUntil(
+        '/login',
+        (route) => false,
+      );
       return false;
     }
   }
