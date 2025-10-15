@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 import 'package:one_ielts_supports/data/api_client.dart';
 import 'package:one_ielts_supports/data/service/local_storage.dart';
@@ -97,20 +99,31 @@ class ApiService {
 
   String? getNextInboxPage() => _nextInboxUri;
   // Fetch chat messages by chatId
-  Future<int> getUnreadCount(int chatId) async {
+  Future<Map<String, dynamic>> getInboxChat(int chatId) async {
     try {
       final tokens = await TokenStorage.getTokens();
       final accessToken = tokens['accessToken'];
-      if (accessToken == null) return 0;
+      if (accessToken == null) return {};
       final response = await _api.client.get(
         '/api/support/studio/v1/chats/$chatId/',
         options: Options(headers: _myHeader(accessToken: accessToken)),
       );
       if (response.statusCode == 200) {
-        return response.data['unread_count'];
+        return response.data;
       } else {
-        return 0;
+        return {};
       }
+    } on DioException catch (_) {
+      return {};
+    }
+  }
+
+  Future<int> getUnreadCount(int chatId) async {
+    try {
+      final chat = await getInboxChat(chatId);
+      if (chat.isEmpty) return 0;
+      final unreadCount = chat['unread_count'] as int;
+      return unreadCount;
     } on DioException catch (_) {
       return 0;
     }
@@ -178,7 +191,7 @@ Map<String, dynamic> _myHeader({required String accessToken}) {
     'Content-Type': 'application/json',
     'organization-domain': 'test.portal.oneielts.com',
     'app-locale': 'en-GB',
-    'app-os': 'Linux x86_64',
+    'app-os': Platform.isAndroid ? 'Android' : 'Linux x86_64',
     'app-package-name': 'test.portal.oneielts.com',
     'app-platform': 'web',
     'app-version': '2.4.0',

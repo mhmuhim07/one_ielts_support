@@ -26,7 +26,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     setState(() => _isLoading = true);
     try {
-      final success = await ref.read(authProvider.notifier).login(email, password);
+      final success = await ref
+          .read(authProvider.notifier)
+          .login(email, password);
       if (success) {
         Navigator.pushReplacementNamed(context, '/inbox');
       } else {
@@ -42,9 +44,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         SnackBar(content: Text('Login Failed: $e')),
       );
     } finally {
-      setState(() => _isLoading = false); // ALWAYS reset loading
+      setState(() => _isLoading = false);
     }
   }
+
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
@@ -62,23 +65,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   width: 300,
                   height: 80,
                 ),
-                SizedBox(height: 20,),
+                SizedBox(height: 20),
                 Text(
                   'Sign in To Your Account',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 20
-                  ),
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
                 ),
-                SizedBox(height: 30,),
+                SizedBox(height: 30),
                 TextField(
                   controller: _emailController,
                   decoration: AppInputStyles.roundedInput(
                     hintText: "Email",
-                    prefixIcon: Icons.email_outlined
+                    prefixIcon: Icons.email_outlined,
                   ),
                 ),
-                SizedBox(height: 20,),
+                SizedBox(height: 20),
                 TextField(
                   controller: _passwordController,
                   decoration: AppInputStyles.roundedInput(
@@ -86,23 +86,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     hintText: 'Password',
                     suffixIcon: IconButton(
                       icon: Icon(
-                        _obscureText ? Icons.visibility_off : Icons.visibility
+                        _obscureText ? Icons.visibility_off : Icons.visibility,
                       ),
-                      onPressed: (){
+                      onPressed: () {
                         setState(() {
                           _obscureText = !_obscureText;
                         });
                       },
-                    )
+                    ),
                   ),
                   obscureText: _obscureText,
-
                 ),
-                SizedBox(height: 30,),
+                SizedBox(height: 30),
                 SizedBox(
                   width: double.infinity,
                   child: TextButton(
-                    onPressed: (){
+                    onPressed: () {
                       _onPressed();
                     },
                     style: TextButton.styleFrom(
@@ -110,30 +109,50 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       minimumSize: Size.zero,
                       backgroundColor: Colors.pink,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadiusGeometry.circular(30)
-                      )
-                    ),
-                    child: _isLoading ? Center(child: CircularProgressIndicator(
-                      color: Colors.white,
-                    ),) :  Text(
-                      'Sign In',
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold
+                        borderRadius: BorderRadiusGeometry.circular(30),
                       ),
                     ),
+                    child: _isLoading
+                        ? Center(
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                            ),
+                          )
+                        : Text(
+                            'Sign In',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                   ),
                 ),
-                SizedBox(height: 30,),
+                SizedBox(height: 30),
                 Row(
                   children: [
-                    Expanded(child: Divider(height: 10, thickness: 1, indent: 0, endIndent: 10, color: Colors.grey[400])),
+                    Expanded(
+                      child: Divider(
+                        height: 10,
+                        thickness: 1,
+                        indent: 0,
+                        endIndent: 10,
+                        color: Colors.grey[400],
+                      ),
+                    ),
                     Text('Or'),
-                    Expanded(child: Divider(height: 10, thickness: 1, indent: 10, endIndent: 0, color: Colors.grey[400])),
+                    Expanded(
+                      child: Divider(
+                        height: 10,
+                        thickness: 1,
+                        indent: 10,
+                        endIndent: 0,
+                        color: Colors.grey[400],
+                      ),
+                    ),
                   ],
                 ),
-                SizedBox(height: 30,),
+                SizedBox(height: 30),
                 SizedBox(
                   width: double.infinity,
                   child: TextButton(
@@ -143,10 +162,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       padding: EdgeInsets.symmetric(vertical: 20),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(30),
-                        side: BorderSide(
-                          color: Colors.blue[100]!,
-                          width: 1,
-                        ),
+                        side: BorderSide(color: Colors.blue[100]!, width: 1),
                       ),
                     ),
                     child: Row(
@@ -168,28 +184,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ),
                       ],
                     ),
-                  )
-
+                  ),
                 ),
-                SizedBox(height: 30,),
+                SizedBox(height: 30),
                 RichText(
                   textAlign: TextAlign.center,
                   text: TextSpan(
                     text: 'Don\'t have as account? ',
-                    style: TextStyle(
-                      color: Colors.black,
-                      fontSize: 20,
-                    ),
+                    style: TextStyle(color: Colors.black, fontSize: 20),
                     children: [
                       TextSpan(
                         text: "Sign up",
-                        style: TextStyle(
-                          color: Colors.pink[500],
-                          fontSize: 20
-                        ),
-                        recognizer: TapGestureRecognizer()..onTap = (){}
+                        style: TextStyle(color: Colors.pink[500], fontSize: 20),
+                        recognizer: TapGestureRecognizer()..onTap = () {},
                       ),
-
                     ],
                   ),
                 ),

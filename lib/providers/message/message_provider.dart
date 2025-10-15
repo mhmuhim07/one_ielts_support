@@ -61,8 +61,8 @@ class ChatMessagesNotifier extends _$ChatMessagesNotifier {
     _timer = Timer.periodic(const Duration(seconds: 5), (timer) async {
       int unreadCount = await _apiService.getUnreadCount(chatId);
       if (unreadCount > 0) {
-        print("AtBottom is $_atBottom");
-        print("Unseen is $unreadCount");
+        // print("AtBottom is $_atBottom");
+        // print("Unseen is $unreadCount");
         if (_atBottom) {
           await newMessage(chatId);
           unseen = 0;

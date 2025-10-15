@@ -16,7 +16,7 @@ class InboxScreen extends ConsumerStatefulWidget {
 class _InboxScreenState extends ConsumerState<InboxScreen> {
   final ScrollController _scrollController = ScrollController();
   bool isLoading = false;
-
+  bool isRefreshing = false;
   @override
   void initState() {
     // TODO: implement initState
@@ -39,6 +39,22 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
     });
   }
 
+  void _refreshOnPressed() async {
+    if (isRefreshing) return;
+    setState(() {
+      isRefreshing = true;
+    });
+    try {
+      // await Future.delayed(Duration(seconds: 5));
+      await ref.read(inboxProvider.notifier).refresh();
+    } catch (e) {
+      debugPrint("refresh failed: $e");
+    }
+    setState(() {
+      isRefreshing = false;
+    });
+  }
+
   @override
   void dispose() {
     _scrollController.dispose();
@@ -48,6 +64,7 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
   @override
   Widget build(BuildContext context) {
     final inboxState = ref.watch(inboxProvider);
+    final showNotification = ref.watch(inboxNotificationProvider);
     final scaffoldBackgroundColor = Theme.of(context).scaffoldBackgroundColor;
     return Scaffold(
       appBar: AppBar(
@@ -70,6 +87,20 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
           ],
         ),
         actions: [
+          if (showNotification)
+            isRefreshing
+                ? const Padding(
+                    padding: EdgeInsets.only(right: 16),
+                    child: SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  )
+                : IconButton(
+                    icon: const Icon(Icons.refresh),
+                    onPressed: _refreshOnPressed,
+                  ),
           IconButton(
             icon: const Icon(Icons.more_vert),
             onPressed: () {
@@ -109,7 +140,7 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
                       ),
                     ),
                   ).then((_) {
-                    ref.read(inboxProvider.notifier).refresh();
+                    ref.read(inboxProvider.notifier).updateState(chat.id);
                   });
                 },
                 splashColor: Colors.grey[200],
