@@ -8,6 +8,7 @@ import 'package:one_ielts_supports/model/chat.dart';
 final inboxProvider = AsyncNotifierProvider<InboxNotifier, List<Chat>>(
   InboxNotifier.new,
 );
+final inboxRefreshIndicatorProvider = StateProvider<bool>((ref) => false);
 final inboxNotificationProvider = StateProvider<bool>((ref) => false);
 
 class InboxNotifier extends AsyncNotifier<List<Chat>> {
@@ -29,6 +30,8 @@ class InboxNotifier extends AsyncNotifier<List<Chat>> {
   }
 
   bool showNotification = false;
+  Chat? lastChat;
+  bool showRefreshIndicator = false;
   _startPulling() {
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 5), (timer) async {
@@ -37,10 +40,30 @@ class InboxNotifier extends AsyncNotifier<List<Chat>> {
       );
       if (chat.isNotEmpty) {
         final unseenCount = chat[0]['unread_count'] as int;
-        showNotification = unseenCount > 0;
+        final newChat = Chat.fromJson(chat[0]);
+        if (lastChat == null ||
+            (lastChat!.unreadCount != newChat.unreadCount &&
+                newChat.unreadCount > 0)) {
+          lastChat = newChat;
+          showNotification = true;
+          debugPrint("showNotification: ${lastChat?.name}");
+        } else {
+          showNotification = false;
+        }
         ref.read(inboxNotificationProvider.notifier).state = showNotification;
+        showRefreshIndicator = unseenCount > 0;
+        ref.read(inboxRefreshIndicatorProvider.notifier).state =
+            showRefreshIndicator;
       }
     });
+  }
+
+  void seenShowNotification(int chatId) {
+    if (lastChat != null && lastChat!.id == chatId) {
+      lastChat = null;
+      showNotification = false;
+      ref.read(inboxNotificationProvider.notifier).state = showNotification;
+    }
   }
 
   bool isLoadingMoreData = false;

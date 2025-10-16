@@ -1,21 +1,26 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
-class TokenStorage{
+class TokenStorage {
   static const _accessTokenKey = 'access_token';
   static const _refreshTokenKey = 'refresh_token';
 
-  static Future<void> saveTokens(String accessToken, String refreshToken) async {
+  static Future<void> saveTokens(
+    String accessToken,
+    String refreshToken,
+  ) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_accessTokenKey, accessToken);
     await prefs.setString(_refreshTokenKey, refreshToken);
   }
+
   static Future<Map<String, String?>> getTokens() async {
     final prefs = await SharedPreferences.getInstance();
-    return{
+    return {
       'accessToken': prefs.getString(_accessTokenKey),
       'refreshToken': prefs.getString(_refreshTokenKey),
     };
   }
+
   static Future<void> clearTokens() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_accessTokenKey);
@@ -23,19 +28,25 @@ class TokenStorage{
   }
 }
 
-class UserInfoStorage{
+class UserInfoStorage {
   static const _email = 'email';
   static const _firstName = 'firstName';
-  static const _lastName= 'lastName';
+  static const _lastName = 'lastName';
   static const _avatar = 'avatar';
 
-  static Future<void> saveUserInfo(String email, String firstName, String lastName, String avatar) async {
+  static Future<void> saveUserInfo(
+    String email,
+    String firstName,
+    String lastName,
+    String avatar,
+  ) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_email, email);
     await prefs.setString(_firstName, firstName);
     await prefs.setString(_lastName, lastName);
     await prefs.setString(_avatar, avatar);
   }
+
   static Future<Map<String, String?>> getUserInfo() async {
     final prefs = await SharedPreferences.getInstance();
     return {
@@ -45,6 +56,7 @@ class UserInfoStorage{
       'avatar': prefs.getString(_avatar),
     };
   }
+
   static Future<void> clearUserInfo() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_email);

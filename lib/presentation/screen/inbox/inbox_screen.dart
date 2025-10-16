@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:one_ielts_supports/presentation/screen/inbox/widget/chat_divider.dart';
 import 'package:one_ielts_supports/presentation/screen/inbox/widget/inbox_list_tile.dart';
+import 'package:one_ielts_supports/presentation/screen/inbox/widget/topNotification.dart';
 import 'package:one_ielts_supports/presentation/screen/profile/widget/profile.dart';
 import 'package:one_ielts_supports/providers/inbox/inbox_provider.dart';
 import '../chat/chat_screen.dart';
@@ -64,8 +65,14 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
   @override
   Widget build(BuildContext context) {
     final inboxState = ref.watch(inboxProvider);
-    final showNotification = ref.watch(inboxNotificationProvider);
+    final showRefreshIndicator = ref.watch(inboxRefreshIndicatorProvider);
     final scaffoldBackgroundColor = Theme.of(context).scaffoldBackgroundColor;
+    final showNotification = ref.watch(inboxNotificationProvider);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (showNotification) {
+        TopNotification.show(context, message: "New message received!");
+      }
+    });
     return Scaffold(
       appBar: AppBar(
         backgroundColor: scaffoldBackgroundColor,
@@ -87,7 +94,7 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
           ],
         ),
         actions: [
-          if (showNotification)
+          if (showRefreshIndicator)
             isRefreshing
                 ? const Padding(
                     padding: EdgeInsets.only(right: 16),
@@ -129,6 +136,9 @@ class _InboxScreenState extends ConsumerState<InboxScreen> {
               final chat = inboxChats[index];
               return InkWell(
                 onTap: () {
+                  // ref
+                  // .read(inboxProvider.notifier)
+                  // .seenShowNotification(chat.id);
                   Navigator.push(
                     context,
                     MaterialPageRoute(
