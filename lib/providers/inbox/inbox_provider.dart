@@ -41,12 +41,15 @@ class InboxNotifier extends AsyncNotifier<List<Chat>> {
       if (chat.isNotEmpty) {
         final unseenCount = chat[0]['unread_count'] as int;
         final newChat = Chat.fromJson(chat[0]);
-        if (lastChat == null ||
-            (lastChat!.unreadCount != newChat.unreadCount &&
-                newChat.unreadCount > 0)) {
-          lastChat = newChat;
-          showNotification = true;
-          debugPrint("showNotification: ${lastChat?.name}");
+        if (newChat.unreadCount > 0) {
+          if (lastChat == null ||
+              lastChat!.unreadCount != newChat.unreadCount) {
+            lastChat = newChat;
+            showNotification = true;
+            debugPrint("showNotification: ${lastChat?.name}");
+          } else {
+            showNotification = false;
+          }
         } else {
           showNotification = false;
         }
@@ -56,14 +59,6 @@ class InboxNotifier extends AsyncNotifier<List<Chat>> {
             showRefreshIndicator;
       }
     });
-  }
-
-  void seenShowNotification(int chatId) {
-    if (lastChat != null && lastChat!.id == chatId) {
-      lastChat = null;
-      showNotification = false;
-      ref.read(inboxNotificationProvider.notifier).state = showNotification;
-    }
   }
 
   bool isLoadingMoreData = false;
@@ -114,7 +109,7 @@ class InboxNotifier extends AsyncNotifier<List<Chat>> {
       final currentChats = List<Chat>.from(state.value ?? []);
       final index = currentChats.indexWhere((chat) => chat.id == chatId);
       if (index != -1) {
-        if (currentChats[index] != updatedChat) {
+        if (currentChats[index].lastMessage != updatedChat.lastMessage) {
           currentChats.removeAt(index);
           currentChats.insert(0, updatedChat);
           state = AsyncValue.data([...currentChats]);
