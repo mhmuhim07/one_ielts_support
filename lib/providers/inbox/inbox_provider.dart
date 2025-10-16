@@ -113,6 +113,10 @@ class InboxNotifier extends AsyncNotifier<List<Chat>> {
           currentChats.removeAt(index);
           currentChats.insert(0, updatedChat);
           state = AsyncValue.data([...currentChats]);
+        } else if (currentChats[index].unreadCount != updatedChat.unreadCount) {
+          currentChats.removeAt(index);
+          currentChats.insert(index, updatedChat);
+          state = AsyncValue.data([...currentChats]);
         }
       }
     } catch (e) {
